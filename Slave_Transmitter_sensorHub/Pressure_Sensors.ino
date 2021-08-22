@@ -6,11 +6,15 @@
  */
 
 //initialize variables
-const buzzer = 2;
-const venous_sensor = A0; //will return a voltage
-const arterial_sensor = A1;
-const inflow_sensor = A2;
-const section_area = 2; // assume cross sectional area of force sensor is 2m^2
+const int buzzer = 2;
+const int venous_sensor = A0; //will return a voltage
+const int arterial_sensor = A1;
+const int inflow_sensor = A2;
+const int section_area = 2; // assume cross sectional area of force sensor is 2m^2
+
+float venous = 0;
+float arterial = 0;
+float inflow = 0;
 
 void setup_pressure_sensors() {
   pinMode(venous_sensor,INPUT);
@@ -23,20 +27,20 @@ void setup_pressure_sensors() {
 float venous_pressure () {
   float val = analogRead(venous_sensor); //read sensor value
   float force_value = map(val, 0, 914, 0, 10); //map force to voltage
-  float pressure_value = forceValue/sectionArea; //gives pressure in kPa
-  
-  return pressure_value;
- }
-
-float arterialPressure () {
-  float val = analogRead(arterial_sensor); //read sensor value
-  float forceValue = map(val, 0, 914, 0, 10); //map force to voltage
   float pressure_value = force_value/section_area; //gives pressure in kPa
   
   return pressure_value;
  }
 
-float inflowPressure () {
+float arterial_pressure () {
+  float val = analogRead(arterial_sensor); //read sensor value
+  float force_value = map(val, 0, 914, 0, 10); //map force to voltage
+  float pressure_value = force_value/section_area; //gives pressure in kPa
+  
+  return pressure_value;
+ }
+
+float inflow_pressure () {
   float val = analogRead(inflow_sensor); //read sensor value
   float force_value = map(val, 0, 914, 0, 10); //map force to voltage
   float pressure_value = force_value/section_area; //gives pressure in kPa
@@ -46,10 +50,7 @@ float inflowPressure () {
 
 void loop()
 {
-  float venous = venous_pressure();
-  float arterial = arterial_pressure();
-  float inflow = inflow_pressure();
-  Serial.println(venous);
-  Serial.println(arterial);
-  Serial.println(inflow);
+  venous = venous_pressure();
+  arterial = arterial_pressure();
+  inflow = inflow_pressure();
 }
