@@ -16,7 +16,7 @@ float inflow_pressure_hth; //Inflow pressure higher threshold
 float arterial_pressure_lth; //Arterial pressure lower threshold
 float arterial_pressure_hth; //Arterial pressure higher threshold
 
-void alarm () {
+void alarm() {
   if (air_detector_lth < air_detector() < air_detector_hth)
   {
 

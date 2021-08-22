@@ -5,7 +5,7 @@
  * PURPOSE: To read air detector and to output information from air detector
  */
 
- void air_detector () {
+ void air_detector() {
 
   
  }

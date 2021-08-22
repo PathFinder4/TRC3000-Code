@@ -6,11 +6,11 @@
  */
 
 //initialize variables
-int buzzer = 2;
-float venous_sensor = A0; //will return a voltage
-float arterial_sensor = A1;
-float inflow_sensor = A2;
-float section_area = 2; // assume cross sectional area of force sensor is 2m^2
+const buzzer = 2;
+const venous_sensor = A0; //will return a voltage
+const arterial_sensor = A1;
+const inflow_sensor = A2;
+const section_area = 2; // assume cross sectional area of force sensor is 2m^2
 
 void setup() 
 {
