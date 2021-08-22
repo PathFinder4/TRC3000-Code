@@ -16,6 +16,7 @@ struct Data {
   float venous_pressure_value; //Venous pressure value
   float inflow_pressure_value; //Inflow pressure value
   float arterial_pressure_value; //Arterial pressure value
+  float temperature_value; //temperature sensor value
   
   char C; //keeping this here in case we need to transmit more complicated information accross in the future 
 } info {
@@ -63,12 +64,13 @@ void setup()
 void loop()
 {
   // updating values
-  air_detector_value = air_detector();
-  blood_leakage_value = blood_leakage();
-  venous_pressure_value = venous_pressure();
-  inflow_pressure_value = inflow_pressure();
-  arterial_pressure_value = arterial_presure();
-
+  sensor_data.air_detector_value = air_detector();
+  sensor_data.blood_leakage_value = blood_leakage();
+  sensor_data.venous_pressure_value = venous_pressure();
+  sensor_data.inflow_pressure_value = inflow_pressure();
+  sensor_data.arterial_pressure_value = arterial_presure();
+  sensor_data.temperature_value = temp_sensor();
+  
   while (on_state == true)
   {
     alarm() //trigger alarm if fails thershols check

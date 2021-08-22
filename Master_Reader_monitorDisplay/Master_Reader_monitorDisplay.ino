@@ -27,7 +27,21 @@ struct Data {
 
 // ------ CONSTANT VARIABLES -----------
 const int on_switch_pin = 2; // ON BUTTON PIN - ensures machine doesn't run until the doctor is ready and wants to start the dialysis process
+const int blood_pump_speed = 2; // pump in delay in microseconds -> should be converted to pressure calculations
+const int heparin_pump_speed = 10; // pump in delay in microseconds -> should be converted to pressure calculations 
 
+
+//stepper motor (blood Pump) pins
+const int bp_stepper_pin1 = 6
+const int bp_stepper_pin2 = 7
+const int bp_stepper_pin3 = 8
+const int bp_stepper_pin4 = 9
+
+//stepper motor (heparin pump) pins
+const int hp_stepper_pin1 = 10
+const int hp_stepper_pin2 = 11
+const int hp_stepper_pin3 = 12
+const int hp_stepper_pin4 = 13
 
 void setup()
 {
@@ -37,8 +51,12 @@ void setup()
   Serial.begin(400000); // 400k full sppeed baud rate
 
   // -----INSTANTIATE VARIABLES -----------
-  struct Data sensor_data //instantiate struct to hold data
+  struct Data sensor_data; //instantiate struct to hold data
 
+  // ---- SETUP DEVICES ----
+  stepper_motors_setup(bp_stepper_pin1, bp_stepper_pin2, bp_stepper_pin3, bp_stepper_pin4);
+  stepper_motors_setup(hp_stepper_pin1, hp_stepper_pin2, hp_stepper_pin3, hp_stepper_pin4);
+  
   //---- BUFFER LOOP ------
   //to run until sensors should start being run 
   while(on_state == false)
@@ -57,7 +75,9 @@ void setup()
 
 void loop()
 {
-  delay(100);
+  stepper_motors_step(bp_stepper_pin1, bp_stepper_pin2, bp_stepper_pin3, bp_stepper_pin4, blood_pump_speed);
+  stepper_motors_step(hp_stepper_pin1, hp_stepper_pin2, hp_stepper_pin3, hp_stepper_pin4, heparin_pump_speed);
+  delay(arbitrary_delay); // need to change this value to change the step speed
 }
 
 
