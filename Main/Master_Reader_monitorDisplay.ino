@@ -46,17 +46,13 @@ void setup()
     if (on_switch_pin == HIGH) {
     // turn LED on:
     on_state = true
-  } else {
+  } else 
+  {
     // turn LED off:
     on_state = false
   }
   }
 }
-
-
-
-
-
 
 
 void loop()
@@ -65,17 +61,12 @@ void loop()
 }
 
 
-
-
-
-
-
 void receiveEvent(int howMany)
 { 
   // receiving data as bytes and storing it at the address of 'info'
   Wire.readBytes((byte*) &sensor_data, sizeof(sensor_data));
 
-  // ---- UPDATE MONTIOR CODE -----
+  // ---- UPDATE MONTIOR CODE HERE -----
   
 
 }

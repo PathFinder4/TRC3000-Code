@@ -12,8 +12,7 @@ const arterial_sensor = A1;
 const inflow_sensor = A2;
 const section_area = 2; // assume cross sectional area of force sensor is 2m^2
 
-void setup() 
-{
+void setup_pressure_sensors() {
   pinMode(venous_sensor,INPUT);
   pinMode(arterial_sensor,INPUT);
   pinMode(inflow_sensor,INPUT);

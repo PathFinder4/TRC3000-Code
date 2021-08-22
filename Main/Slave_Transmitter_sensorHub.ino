@@ -38,6 +38,9 @@ void setup()
   struct Data sensor_data;
   bool on_state = false;
 
+  // ---- SETUP DEVICES ------
+  setup_pressure_sensors(); 
+
   //---- BUFFER LOOP ------
   //to run until sensors should start being run 
   while(on_state == false)
@@ -52,15 +55,9 @@ void setup()
       on_state = false;
     }
   }
-  
-  
 
   
 }
-
-
-
-
 
 
 void loop()
