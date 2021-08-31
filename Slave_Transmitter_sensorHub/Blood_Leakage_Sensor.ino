@@ -1,12 +1,11 @@
 /* Written by [NAME] [STU. NO.]
  * Last edited [DATE]
  * INPUT: No input
- * OUTPUT: Air Detector Readings
- * PURPOSE: To read air detector and to output information from air detector
+ * OUTPUT: Blood Leakage Sensor
+ * PURPOSE: To read blood leak sensor and to output information from blood leak sensor
  */
 
-void blood_leakage(){
-
-  
- }
- 
+float blood_leakage_sensor ()
+{
+  return analogRead(blood_sensor);
+}
