@@ -4,6 +4,9 @@
  * OUTPUT: Stepper Motor actuation
  * PURPOSE: To operate blood pump and heparin pump
  * blood pumpto maintain constant pressure of 18kPa
+ * 
+ * 
+ * OUTDATED CODE CAN IGNORE (NO LONGER USING STEPPERS  - REPLACED WITH DC)
  */
 
 

@@ -71,10 +71,7 @@ void loop()
   sensor_data.arterial_pressure_value = arterial_presure();
   sensor_data.temperature_value = temp_sensor();
   
-  while (on_state == true)
-  {
-    alarm() //trigger alarm if fails thershols check
-  }
+  alarm(sensor_data) //trigger alarm if fails thershols check
   
   // transmiting the array as bytes
   Wire.beginTransmission(4); //send to I2C address 4 to as an event to be flagged and read by master

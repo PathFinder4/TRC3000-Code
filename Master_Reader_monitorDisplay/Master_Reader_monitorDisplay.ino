@@ -27,21 +27,21 @@ struct Data {
 
 // ------ CONSTANT VARIABLES -----------
 const int on_switch_pin = 2; // ON BUTTON PIN - ensures machine doesn't run until the doctor is ready and wants to start the dialysis process
-const int blood_pump_speed = 2; // pump in delay in microseconds -> should be converted to pressure calculations
-const int heparin_pump_speed = 10; // pump in delay in microseconds -> should be converted to pressure calculations 
+const int ideal_bp_value = 9999; // idk what units or value to use rn but here's the var
+const int margin = 1; //how precise we want adjustments to be for the pressure control loop
+const int control_loop_delay = 10; //ms delay between each control loop adjustment
+
+// ------ GLOBAL VARIABLES -----------
+int blood_pump_speed = 165; // duty cycle 0 255
+int heparin_pump_speed = 10; // duty cycle 0 255 
 
 
-//stepper motor (blood Pump) pins
-const int bp_stepper_pin1 = 6
-const int bp_stepper_pin2 = 7
-const int bp_stepper_pin3 = 8
-const int bp_stepper_pin4 = 9
+//DC motor (blood Pump) pins (PWM only)
+const int bp_pump_pin = 6
 
-//stepper motor (heparin pump) pins
-const int hp_stepper_pin1 = 10
-const int hp_stepper_pin2 = 11
-const int hp_stepper_pin3 = 12
-const int hp_stepper_pin4 = 13
+//DC motor (heparin pump) pins (PWM only)
+const int hp_pump_pin = 10
+
 
 void setup()
 {
@@ -54,8 +54,8 @@ void setup()
   struct Data sensor_data; //instantiate struct to hold data
 
   // ---- SETUP DEVICES ----
-  stepper_motors_setup(bp_stepper_pin1, bp_stepper_pin2, bp_stepper_pin3, bp_stepper_pin4);
-  stepper_motors_setup(hp_stepper_pin1, hp_stepper_pin2, hp_stepper_pin3, hp_stepper_pin4);
+  analogWrite(bp_pump_pin, blood_pump_speed);
+  analogWrite(hp_pump_pin, heparin_pump_speed);
   
   //---- BUFFER LOOP ------
   //to run until sensors should start being run 
@@ -75,9 +75,19 @@ void setup()
 
 void loop()
 {
-  stepper_motors_step(bp_stepper_pin1, bp_stepper_pin2, bp_stepper_pin3, bp_stepper_pin4, blood_pump_speed);
-  stepper_motors_step(hp_stepper_pin1, hp_stepper_pin2, hp_stepper_pin3, hp_stepper_pin4, heparin_pump_speed);
-  delay(arbitrary_delay); // need to change this value to change the step speed
+  // feedback control for motor control
+  if(venous_pressure_value>ideal_bp_value+margin){
+    blood_pump_speed--;  
+  }
+  else if(blood_pump_speed<255 && venous_pressure_value>ideal_bp_value-margin ){
+    blood_pump_speed++;
+  }
+
+  //update pump allocated duty cycle on pins to update bp pump speeds
+  analogWrite(bp_pump_pin, blood_pump_speed);
+
+  
+  delay(control_loop_delay); // need to change this value to change the step speed
 }
 
 
