@@ -23,7 +23,7 @@ const int buzzer = 6;
 const int venous_sensor = A0;
 const int arterial_sensor = A1;
 const int inflow_sensor = A2;
-const int venous_LED = 3;
+const int venous_LED = 2;
 const int inflow_LED = 5;
 const int arterial_LED = 4;
 
@@ -86,11 +86,19 @@ void alarm(struct Data sensor_data)
     analogWrite(venous_LED, 1023);
     alarm_triggered = 1;
   }
+  else
+  {
+    analogWrite(venous_LED, 0);
+  }
   if (arterial_pressure_lth > sensor_data.arterial_pressure_value || arterial_pressure_hth < sensor_data.arterial_pressure_value)
   {
     tone(buzzer, 92);
     analogWrite(arterial_LED, 1023);
     alarm_triggered = 1;
+  }
+  else
+  {
+  	analogWrite(arterial_LED, 0);
   }
   if (inflow_pressure_lth > sensor_data.inflow_pressure_value || inflow_pressure_hth < sensor_data.inflow_pressure_value)
   {
@@ -98,12 +106,13 @@ void alarm(struct Data sensor_data)
     analogWrite(inflow_LED, 1023);
     alarm_triggered = 1;
   }
+  else
+  {
+  	analogWrite(inflow_LED, 0);  
+  }
   if (alarm_triggered == 0)
   {
     noTone(buzzer);
-    analogWrite(venous_LED, 0);
-    analogWrite(arterial_LED, 0);
-    analogWrite(inflow_LED, 0);
   }
   delay(5);
 }
