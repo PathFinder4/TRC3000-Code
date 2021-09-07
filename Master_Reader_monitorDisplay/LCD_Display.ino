@@ -39,7 +39,13 @@ void updateLCDDisplay()
   lcd1.setCursor(0,iLineNumberTop);
   lcd2.setCursor(0,iLineNumberTop);
   
-  lcd1.print("Patient Temp: ");
+  // String Concatenation
+  String lcd1String1 = String("Patient Temp: ");
+  String lcd1String2 = String("C");
+  String lcd1StringTotal = lcd1String1 + (char)178 + lcd1String2;
+  
+  lcd1.print(lcd1StringTotal);
+  
   lcd2.print("Blood Pressure: ");
   
   // Bottom Row 
