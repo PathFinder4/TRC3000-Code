@@ -4,6 +4,7 @@ struct Cluster_Data {
   float blood_leakage_value; //Venous pressure value
   float body_temp_value; //Inflow pressure value
   float dialysate_temp_value; //Arterial pressure value
+  float urea_sensor_value;
 };
 
 struct Cluster_Data cluster_sensor_data;
@@ -20,6 +21,7 @@ const int urea_LED = 6;
 const int body_temp_sensor_pin = A0; // Temperature Sensor Pin
 const int dialysate_temp_sensor_pin = A1; // Temperature Sensor Pin 
 const int blood_leakage_pin = A2;
+const int urea_sensor_pin = A3;
 
 void setup()
 {
@@ -28,6 +30,7 @@ void setup()
   pinMode(body_temp_sensor_pin,INPUT);
   pinMode(dialysate_temp_sensor_pin,INPUT);
   pinMode(blood_leakage_pin,INPUT);
+  pinMode(urea_sensor_pin, INPUT);
   pinMode(buzzer, OUTPUT);
   pinMode(dialysate_LED, OUTPUT);
   pinMode(body_temp_LED, OUTPUT);
@@ -85,12 +88,21 @@ float blood_leakage_sensor()
   return analogRead(blood_leakage_pin);
 }
 
+// ------ UREA SENSOR FUNCTION ------
+float urea_sensor()
+{
+  float urea_value = analogRead(urea_sensor_pin);
+  urea_value = map(urea_value, 306, 750, 0, 100); //map values *CHANGE LATER?*
+  return urea_value;
+}
 // ------ ALARM FUNCTION ------
 //Initilize sensor threshholds
 const float body_temp_lth = 36;
 const float body_temp_hth = 37;
 const float dialysate_temp_lth = 35;
 const float dialysate_temp_hth = 39;
+const float urea_lth = 25;
+const float urea_hth = 75;
 const float blood_leakage_minimum = 6;
 const float air_bubble_minimum = 1;
 
@@ -132,6 +144,18 @@ void alarm(struct Cluster_Data cluster_sensor_data)
   {
   	analogWrite(blood_leak_LED, 0);  
   }
+  if(urea_lth > cluster_sensor_data.urea_sensor_value || urea_hth < cluster_sensor_data.urea_sensor_value)
+  {
+    //turn on alarm
+    tone(buzzer, 92);
+    //turn on LED to indicate sensor toggling alarm
+    analogWrite(urea_LED, 1023);
+    alarm_triggered = 1;
+  }
+  else
+  {
+    analogWrite(urea_LED, 0);
+  }
   if (alarm_triggered == 0)
   {
     noTone(buzzer);
@@ -145,7 +169,7 @@ void loop()
   cluster_sensor_data.blood_leakage_value = blood_leakage_sensor();
   cluster_sensor_data.body_temp_value = body_temp_sensor();
   cluster_sensor_data.dialysate_temp_value = dialysate_temp_sensor();
-
+  cluster_sensor_data.urea_sensor_value = urea_sensor();
   alarm(cluster_sensor_data);
   
   delay(10);
