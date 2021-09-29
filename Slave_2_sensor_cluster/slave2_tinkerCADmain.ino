@@ -1,4 +1,5 @@
 #include <Wire.h>
+#include <Keypad.h>
 // ----- SETUP DATA STRUCTURES ------
 struct Cluster_Data {
   float blood_leakage_value; //Venous pressure value
@@ -8,6 +9,89 @@ struct Cluster_Data {
 };
 
 struct Cluster_Data cluster_sensor_data;
+
+// ------- KEY PAD INITIALIZE ------- 
+const byte numR = 4; 
+const byte numC = 3; 
+
+char keys[numR][numC] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+
+// Connect to Digital Pins of Arduino 
+byte pinR[numR] = {12, 11, 10, 9};
+byte pinC[numC] = {3, 1, 0}; 
+
+Keypad keypad = Keypad(makeKeymap(keys), pinR, pinC, numR, numC);
+
+//Initilize sensor threshholds
+float body_temp_lth = 0;
+float body_temp_hth = 0;
+float dialysate_temp_lth = 0;
+float dialysate_temp_hth = 0;
+float urea_lth = 0;
+float urea_hth = 0;
+float blood_leakage_minimum = 1; //doesnt require change of threshhold
+float air_bubble_minimum = 1;
+
+void initialize_variables()
+{
+  // User Input on Keypad
+  char key = keypad.getKey();
+  
+  //initialize hash count
+  int hash_count = 0;
+  
+  //initlialize alarm value pointers
+  float *body_temp_hth_ptr = &body_temp_hth;
+  float *body_temp_lth_ptr = &body_temp_lth;
+  float *dialysate_temp_hth_ptr = &dialysate_temp_hth;
+  float *dialysate_temp_lth_ptr = &dialysate_temp_lth;
+  float *urea_hth_ptr = &urea_hth;
+  float *urea_lth_ptr = &urea_lth;
+  
+  float* val_array[6] = {body_temp_hth_ptr, body_temp_lth_ptr, dialysate_temp_hth_ptr, dialysate_temp_lth_ptr, urea_hth_ptr, urea_lth_ptr};
+  int val_count = 0;
+  float val_value = 0;
+  String inputString;
+  
+  //stay in loop until hash has been pressed 12 times
+  //allows both initialization loops in ard 1 and ard 3 to complete same time
+  while (hash_count < 12)
+  {
+    key = keypad.getKey();
+    if (key) //so that it reads key input
+      {
+      //obtain keypad input and place into variable
+      if (key >= '0' && key <= '9') 		// only act on numeric keys	
+      {     								
+        inputString += key;               // append new character to input string
+      } 
+      else if (key == '#') 				// end input when encountering a #
+      {
+        if (inputString.length() > 0) 
+        {
+          hash_count++;
+          val_value = inputString.toFloat(); // YOU GOT AN INTEGER NUMBER
+          inputString = "";                  // clear input
+          if (hash_count > 6) //dont update values for this arduino until Arduino 1 is completed
+          {
+            *val_array[val_count] = val_value;// assign input to variable using *val_array
+            val_count++;
+          }
+        }
+      }
+      else if (key == '*') 
+      {
+        inputString = "";                 // clear input
+      }
+    }
+  }
+}
+// ----------------------------------------------
 
 // ------ CONSTANT VARIABLES -----------
 //const int on_switch_pin = 2; // ON BUTTON PIN - ensures sensors aent running until machine starts
@@ -35,8 +119,9 @@ void setup()
   pinMode(dialysate_LED, OUTPUT);
   pinMode(body_temp_LED, OUTPUT);
   pinMode(blood_leak_LED, OUTPUT);
-  pinMode(air_bubble_LED, OUTPUT);
+  pinMode(air_bubble_LED, INPUT);
   pinMode(urea_LED, OUTPUT);
+  initialize_variables();
 }
 
 // ------ TEMPERATURE SENSOR FUNCTION -----
@@ -95,17 +180,8 @@ float urea_sensor()
   urea_value = map(urea_value, 306, 750, 0, 100); //map values *CHANGE LATER?*
   return urea_value;
 }
-// ------ ALARM FUNCTION ------
-//Initilize sensor threshholds
-const float body_temp_lth = 36;
-const float body_temp_hth = 37;
-const float dialysate_temp_lth = 35;
-const float dialysate_temp_hth = 39;
-const float urea_lth = 25;
-const float urea_hth = 75;
-const float blood_leakage_minimum = 6;
-const float air_bubble_minimum = 1;
 
+// ------ ALARM FUNCTION ------
 void alarm(struct Cluster_Data cluster_sensor_data) 
 {
   //if an alarm was triggered, this will be set to 1 and the buzzer and LED will NOT reset

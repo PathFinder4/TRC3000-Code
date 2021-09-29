@@ -1,20 +1,96 @@
 // C++ code
 //
 #include <Wire.h>
+#include <Keypad.h>
 // ----- SETUP DATA STRUCTURES ------
-struct Data {
+struct Pressure_Data {
   float venous_pressure_value; //Venous pressure value
   float inflow_pressure_value; //Inflow pressure value
   float arterial_pressure_value; //Arterial pressure value
-  
-  char C; //keeping this here in case we need to transmit more complicated information accross in the future 
-} info {
-  10,
-  100,
-  'd'
 };
 
-struct Data sensor_data;
+struct Pressure_Data pressure_sensor_data;
+
+// ------- KEY PAD INITIALIZE ------- 
+const byte numR = 4; 
+const byte numC = 3; 
+
+char keys[numR][numC] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+
+// Connect to Digital Pins of Arduino 
+byte pinR[numR] = {12, 11, 10, 9};
+byte pinC[numC] = {8, 7, 0}; 
+
+Keypad keypad = Keypad(makeKeymap(keys), pinR, pinC, numR, numC);
+
+//Initilize sensor threshholds
+  float venous_pressure_lth = 0; //Venous pressure lower threshold
+  float venous_pressure_hth = 0; //Venous pressure higher threshold
+  float inflow_pressure_lth = 0; //Inflow pressure lower threshold
+  float inflow_pressure_hth = 0; //Inflow pressure higher threshold
+  float arterial_pressure_lth = 0; //Arterial pressure lower threshold
+  float arterial_pressure_hth = 0; //Arterial pressure higher threshold
+
+void initialize_variables()
+{
+  // User Input on Keypad
+  char key = keypad.getKey();
+  
+  //initialize hash count
+  int hash_count = 0;
+  
+  //initlialize alarm value pointers
+  float *venous_pressure_hth_ptr = &venous_pressure_hth;
+  float *venous_pressure_lth_ptr = &venous_pressure_lth;
+  float *inflow_pressure_hth_ptr = &inflow_pressure_hth;
+  float *inflow_pressure_lth_ptr = &inflow_pressure_lth;
+  float *arterial_pressure_hth_ptr = &arterial_pressure_hth;
+  float *arterial_pressure_lth_ptr = &arterial_pressure_lth;
+  
+  float* val_array[6] = {venous_pressure_hth_ptr, venous_pressure_lth_ptr, arterial_pressure_hth_ptr, arterial_pressure_lth_ptr, inflow_pressure_hth_ptr, inflow_pressure_lth_ptr};
+  int val_count = 0;
+  float val_value = 0;
+  String inputString;
+  
+  //stay in loop until hash has been pressed 12 times
+  //allows both initialization loops in ard 1 and ard 3 to complete same time
+  while (hash_count < 12)
+  {
+    key = keypad.getKey();
+    if (key) //so that it reads key input
+      {
+      //obtain keypad input and place into variable
+      if (key >= '0' && key <= '9') 		// only act on numeric keys	
+      {     								
+        inputString += key;               // append new character to input string
+      } 
+      else if (key == '#') 				// end input when encountering a #
+      {
+        if (inputString.length() > 0) 
+        {
+          hash_count++;
+          val_value = inputString.toFloat(); // YOU GOT AN INTEGER NUMBER
+          inputString = "";                // clear input
+          if (hash_count < 7) //dont update values after 6th hash
+          {
+            *val_array[val_count] = val_value;// assign input to variable using *val_array
+            val_count++;
+          }
+        }
+      }
+      else if (key == '*') 
+      {
+        inputString = "";                 // clear input
+      }
+    }
+  }
+}
+// ----------------------------------------------
 
 // ------ CONSTANT VARIABLES -----------
 const int on_switch_pin = 2; // ON BUTTON PIN - ensures sensors aent running until machine starts
@@ -24,7 +100,7 @@ const int venous_sensor = A0;
 const int arterial_sensor = A1;
 const int inflow_sensor = A2;
 const int venous_LED = 2;
-const int inflow_LED = 5;
+const int inflow_LED = 1;
 const int arterial_LED = 4;
 
 void setup()
@@ -44,6 +120,7 @@ void setup()
   pinMode(venous_LED, OUTPUT);
   pinMode(inflow_LED, OUTPUT);
   pinMode(arterial_LED, OUTPUT);
+  initialize_variables();	//run initialization setup for alarms
 
   /*
   //---- BUFFER LOOP ------
@@ -64,21 +141,13 @@ void setup()
 }
 
 // ------ ALARM FUNCTION ------
-//Initilize sensor threshholds
-const float venous_pressure_lth = 1; //Venous pressure lower threshold
-const float venous_pressure_hth = 4; //Venous pressure higher threshold
-const float inflow_pressure_lth = 1; //Inflow pressure lower threshold
-const float inflow_pressure_hth = 4; //Inflow pressure higher threshold
-const float arterial_pressure_lth = 1; //Arterial pressure lower threshold
-const float arterial_pressure_hth = 4; //Arterial pressure higher threshold
-
-void alarm(struct Data sensor_data) 
+void alarm(struct Pressure_Data pressure_sensor_data) 
 {
   //if an alarm was triggered, this will be set to 1 and the buzzer and LED will NOT reset
   int alarm_triggered = 0;
   delay(5);
   //check all values
-  if(venous_pressure_lth > sensor_data.venous_pressure_value || venous_pressure_hth < sensor_data.venous_pressure_value)
+  if(venous_pressure_lth > pressure_sensor_data.venous_pressure_value || venous_pressure_hth < pressure_sensor_data.venous_pressure_value)
   {
     //turn on alarm
     tone(buzzer, 92);
@@ -90,7 +159,7 @@ void alarm(struct Data sensor_data)
   {
     analogWrite(venous_LED, 0);
   }
-  if (arterial_pressure_lth > sensor_data.arterial_pressure_value || arterial_pressure_hth < sensor_data.arterial_pressure_value)
+  if (arterial_pressure_lth > pressure_sensor_data.arterial_pressure_value || arterial_pressure_hth < pressure_sensor_data.arterial_pressure_value)
   {
     tone(buzzer, 92);
     analogWrite(arterial_LED, 1023);
@@ -100,7 +169,7 @@ void alarm(struct Data sensor_data)
   {
   	analogWrite(arterial_LED, 0);
   }
-  if (inflow_pressure_lth > sensor_data.inflow_pressure_value || inflow_pressure_hth < sensor_data.inflow_pressure_value)
+  if (inflow_pressure_lth > pressure_sensor_data.inflow_pressure_value || inflow_pressure_hth < pressure_sensor_data.inflow_pressure_value)
   {
     tone(buzzer, 92);
     analogWrite(inflow_LED, 1023);
@@ -147,17 +216,16 @@ float inflow_pressure () {
 void loop()
 {
   // updating values
-  sensor_data.venous_pressure_value = venous_pressure();
-  sensor_data.inflow_pressure_value = inflow_pressure();
-  sensor_data.arterial_pressure_value = arterial_pressure();
+  pressure_sensor_data.venous_pressure_value = venous_pressure();
+  pressure_sensor_data.inflow_pressure_value = inflow_pressure();
+  pressure_sensor_data.arterial_pressure_value = arterial_pressure();
   
-  alarm(sensor_data); //trigger alarm if fails thershols check
+  alarm(pressure_sensor_data); //trigger alarm if fails thershols check
   
-  /*
   // transmiting the array as bytes
   Wire.beginTransmission(4); //send to I2C address 4 to as an event to be flagged and read by master
-  Wire.write((byte*)&sensor_data, sizeof(sensor_data));
+  Wire.write((byte*)&pressure_sensor_data, sizeof(pressure_sensor_data));
   Wire.endTransmission();
-  */
-  delay(10);
+  
+  delay(1000);
 }
