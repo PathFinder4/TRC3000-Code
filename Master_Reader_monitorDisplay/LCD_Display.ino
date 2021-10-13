@@ -42,12 +42,14 @@ void updateLCDDisplay()
   // String Concatenation
   String lcd1String1 = String("Patient Temp: ");
   String lcd1String2 = String("C");
-  String lcd1StringTotal = lcd1String1 + (char)178 + lcd1String2;
+  String lcd1StringTotal = lcd1String1 + String(cluster_sensor_data.body_temp_value) + (char)178 + lcd1String2;
   
   lcd1.print(lcd1StringTotal);
   
-  lcd2.print("Blood Pressure: ");
-  
+  String lcd2String1 = String("Blood Pressure: ");
+  String lcd2String2 = String("Pa");
+  lcd2StringTotal = lcd2String1 + String(pressure_sensor_data.venous_pressure_value) + lcd2String2
+  lcd2.print(lcd2StringTotal);
   // Bottom Row 
   lcd1.setCursor(0,iLineNumberBottom);
   lcd2.setCursor(0,iLineNumberBottom);  

@@ -1,5 +1,18 @@
+/* Written by Glen Chen 30572355
+ *  Last edited by Dom
+ *  Edited on 13/10/2021
+ *  
+ *  Code to program the slave arduino, transmitter 
+ *  Designed to modularise reading of all miscellaneous safety sensors in the control cluster and triggering of alarm if thresholds are passed
+ */
+
 #include <Wire.h>
 #include <Keypad.h>
+
+// ------ CONSTANT VARIABLES -----------
+//const int on_switch_pin = 2; // ON BUTTON PIN - ensures sensors aent running until machine starts
+const int user_input_delay = 100;
+
 // ----- SETUP DATA STRUCTURES ------
 struct Cluster_Data {
   float blood_leakage_value; //Venous pressure value
@@ -60,24 +73,24 @@ void initialize_variables()
   
   //stay in loop until hash has been pressed 12 times
   //allows both initialization loops in ard 1 and ard 3 to complete same time
-  while (hash_count < 12)
+  while (hash_count < 14)
   {
     key = keypad.getKey();
     if (key) //so that it reads key input
       {
       //obtain keypad input and place into variable
-      if (key >= '0' && key <= '9') 		// only act on numeric keys	
-      {     								
+      if (key >= '0' && key <= '9')     // only act on numeric keys 
+      {                     
         inputString += key;               // append new character to input string
       } 
-      else if (key == '#') 				// end input when encountering a #
+      else if (key == '#')        // end input when encountering a #
       {
         if (inputString.length() > 0) 
         {
           hash_count++;
           val_value = inputString.toFloat(); // YOU GOT AN INTEGER NUMBER
           inputString = "";                  // clear input
-          if (hash_count > 6) //dont update values for this arduino until Arduino 1 is completed
+          if (hash_count > 8) //dont update values for this arduino until Arduino 1 is completed
           {
             *val_array[val_count] = val_value;// assign input to variable using *val_array
             val_count++;
@@ -89,12 +102,12 @@ void initialize_variables()
         inputString = "";                 // clear input
       }
     }
+    delay(user_input_delay); //delay matches the master cd to ensure that there is no variability in input due to minute LCD delays
+
   }
 }
 // ----------------------------------------------
 
-// ------ CONSTANT VARIABLES -----------
-//const int on_switch_pin = 2; // ON BUTTON PIN - ensures sensors aent running until machine starts
 //Initialize Pins
 const int buzzer = 7;
 const int dialysate_LED = 2;
@@ -122,6 +135,10 @@ void setup()
   pinMode(air_bubble_LED, INPUT);
   pinMode(urea_LED, OUTPUT);
   initialize_variables();
+  //SPI communciation protocol
+  Serial.begin(400000); // 400k full sppeed baud rate
+  Wire.begin(9);                // join i2c bus with address #8
+  Wire.onRequest(requestEvent);
 }
 
 // ------ TEMPERATURE SENSOR FUNCTION -----
@@ -208,7 +225,7 @@ void alarm(struct Cluster_Data cluster_sensor_data)
   }
   else
   {
-  	analogWrite(dialysate_LED, 0);
+    analogWrite(dialysate_LED, 0);
   }
   if (cluster_sensor_data.blood_leakage_value > blood_leakage_minimum)
   {
@@ -218,7 +235,7 @@ void alarm(struct Cluster_Data cluster_sensor_data)
   }
   else
   {
-  	analogWrite(blood_leak_LED, 0);  
+    analogWrite(blood_leak_LED, 0);  
   }
   if(urea_lth > cluster_sensor_data.urea_sensor_value || urea_hth < cluster_sensor_data.urea_sensor_value)
   {
@@ -249,4 +266,9 @@ void loop()
   alarm(cluster_sensor_data);
   
   delay(10);
+}
+
+void requestEvent(){
+  Wire.write((byte*)&cluster_sensor_data, sizeof(cluster_sensor_data));
+  
 }

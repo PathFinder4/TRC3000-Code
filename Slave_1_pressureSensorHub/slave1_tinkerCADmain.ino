@@ -1,5 +1,12 @@
-// C++ code
-//
+/* Written by Glen Chen 30572355
+ *  Last edited by Dom
+ *  Edited on 13/10/2021
+ *  
+ *  Code to program the slave arduino, transmitter 
+ *  Designed to modularise reading of all pressure/flow sensors and triggering of alarm if thresholds are passed
+ *  Also designed to control the pumps by using feedback from the pressure sensors
+ */
+
 #include <Wire.h>
 #include <Keypad.h>
 // ----- SETUP DATA STRUCTURES ------
@@ -39,6 +46,31 @@ float arterial_pressure_hth = 0; //Arterial pressure higher threshold
 float flow_hth = 0;
 float flow_lth = 0;
 
+
+// ------ CONSTANT VARIABLES -----------
+const int ideal_flow_rate = 400/1000/60/1000; //(m^3/s) -> 300-500mL/min is safe - idk what flow rate sensor units r in but leaving as is
+const int margin = 100/1000/60/1000; //how precise we want adjustments to be for the pressure control loop
+const int control_loop_delay = 10; //ms delay between each control loop adjustment
+const int user_input_delay = 100;
+
+// ------ GLOBAL VARIABLES -----------
+int blood_pump_speed = 155; // duty cycle 0 255
+int heparin_pump_speed = 10; // duty cycle 0 255
+
+//Initialize Pins
+const int buzzer = 6;
+const int venous_sensor = A0;
+const int arterial_sensor = A1;
+const int inflow_sensor = A2;
+const int flow_sensor = A3;
+const int venous_LED = 2;
+const int inflow_LED = 1;
+const int arterial_LED = 4;
+const int flow_LED = 13;
+const int bp_pump_pin = 5;//DC motor (blood Pump) pins (PWM only)
+const int hp_pump_pin = 3;//DC motor (heparin pump) pins (PWM only)
+
+
 void initialize_variables()
 {
   // User Input on Keypad
@@ -69,11 +101,11 @@ void initialize_variables()
     if (key) //so that it reads key input
       {
       //obtain keypad input and place into variable
-      if (key >= '0' && key <= '9') 		// only act on numeric keys	
-      {     								
+      if (key >= '0' && key <= '9')     // only act on numeric keys 
+      {                     
         inputString += key;               // append new character to input string
       } 
-      else if (key == '#') 				// end input when encountering a #
+      else if (key == '#')        // end input when encountering a #
       {
         if (inputString.length() > 0) 
         {
@@ -92,22 +124,10 @@ void initialize_variables()
         inputString = "";                 // clear input
       }
     }
+    delay(user_input_delay); //delay matches the master cd to ensure that there is no variability in input due to minute LCD delays
   }
 }
 // ----------------------------------------------
-
-// ------ CONSTANT VARIABLES -----------
-const int on_switch_pin = 2; // ON BUTTON PIN - ensures sensors aent running until machine starts
-//Initialize Pins
-const int buzzer = 6;
-const int venous_sensor = A0;
-const int arterial_sensor = A1;
-const int inflow_sensor = A2;
-const int flow_sensor = A3;
-const int venous_LED = 2;
-const int inflow_LED = 1;
-const int arterial_LED = 4;
-const int flow_LED = 13;
 
 void setup()
 {
@@ -128,24 +148,13 @@ void setup()
   pinMode(inflow_LED, OUTPUT);
   pinMode(arterial_LED, OUTPUT);
   pinMode(flow_LED,OUTPUT);
-  initialize_variables();	//run initialization setup for alarms
-
-  /*
-  //---- BUFFER LOOP ------
-  //to run until sensors should start being run 
-  while(on_state == false)
-  {
-    if (on_switch_pin == HIGH)
-    {
-      // turn sensors on:
-      on_state = true;
-    } else 
-    {
-      // turn sensors off:
-      on_state = false;
-    }
-  }
-  */
+  analogWrite(bp_pump_pin, blood_pump_speed);  // writes the pwm pulse
+  analogWrite(hp_pump_pin, heparin_pump_speed); // writes the pwm pulse
+  initialize_variables(); //run initialization setup for alarms
+//SPI communciation protocol
+  Serial.begin(400000); // 400k full sppeed baud rate
+  Wire.begin(8);                // join i2c bus with address #8
+  Wire.onRequest(requestEvent);
 }
 
 // ------ ALARM FUNCTION ------
@@ -175,7 +184,7 @@ void alarm(struct Pressure_Data pressure_sensor_data)
   }
   else
   {
-  	analogWrite(arterial_LED, 0);
+    analogWrite(arterial_LED, 0);
   }
   if (inflow_pressure_lth > pressure_sensor_data.inflow_pressure_value || inflow_pressure_hth < pressure_sensor_data.inflow_pressure_value)
   {
@@ -185,7 +194,7 @@ void alarm(struct Pressure_Data pressure_sensor_data)
   }
   else
   {
-  	analogWrite(inflow_LED, 0);  
+    analogWrite(inflow_LED, 0);  
   }
   if (flow_lth > pressure_sensor_data.flow_value || flow_hth < pressure_sensor_data.flow_value)
   {
@@ -195,7 +204,7 @@ void alarm(struct Pressure_Data pressure_sensor_data)
   }
   else
   {
-  	analogWrite(flow_LED, 0);  
+    analogWrite(flow_LED, 0);  
   }
   if (alarm_triggered == 0)
   {
@@ -257,6 +266,27 @@ float flow() {
   return flow_value;
  }
 
+void motor_loop(struct Pressure_Data pressure_sensor_data){ 
+  // ---- feedback control for motor control ---
+  //emergency compensation
+  if(blood_pump_speed>0 &&pressure_sensor_data.flow_value>ideal_flow_rate+margin){
+    blood_pump_speed=0;  
+  }
+  else if(blood_pump_speed<255 && pressure_sensor_data.flow_value<ideal_flow_rate-margin ){
+    blood_pump_speed=255;
+  }
+  //minute adjustments
+  else if(blood_pump_speed>0 &&pressure_sensor_data.flow_value>ideal_flow_rate){
+    blood_pump_speed--;  
+  }
+  else if(blood_pump_speed<255 && pressure_sensor_data.flow_value<ideal_flow_rate ){
+    blood_pump_speed++;
+  }
+
+  //update pump allocated duty cycle on pins to update bp pump speeds
+  analogWrite(bp_pump_pin, blood_pump_speed);
+}
+
 void loop()
 {
   // updating values
@@ -267,10 +297,11 @@ void loop()
   
   alarm(pressure_sensor_data); //trigger alarm if fails thershols check
   
-  // transmiting the array as bytes
-  Wire.beginTransmission(4); //send to I2C address 4 to as an event to be flagged and read by master
-  Wire.write((byte*)&pressure_sensor_data, sizeof(pressure_sensor_data));
-  Wire.endTransmission();
+  motor_loop(pressure_sensor_data); //run control loop for motors
   
-  delay(1000);
+  delay(control_loop_delay); //delay on the control loop exageratted due to tinkerCAD limitations
+}
+
+void requestEvent(){ //run the upload on request
+  Wire.write((byte*)&pressure_sensor_data, sizeof(pressure_sensor_data)); 
 }

@@ -33,14 +33,16 @@ const int control_loop_delay = 10; //ms delay between each control loop adjustme
 
 // ------ GLOBAL VARIABLES -----------
 int blood_pump_speed = 165; // duty cycle 0 255
-int heparin_pump_speed = 10; // duty cycle 0 255 
+int heparin_pump_speed = 10; // duty cycle 0 255
+bool on_state = false;
+struct Data sensor_data; //instantiate struct to hold data
 
 
 //DC motor (blood Pump) pins (PWM only)
-const int bp_pump_pin = 6
+const int bp_pump_pin = 6;
 
 //DC motor (heparin pump) pins (PWM only)
-const int hp_pump_pin = 10
+const int hp_pump_pin = 10;
 
 
 void setup()
@@ -49,9 +51,7 @@ void setup()
   Wire.begin(4); // begin I2Cprotocol with arbitrary device 4
   Wire.onReceive(receiveEvent); // changes update paramater to recieve info from slave as soon as the event request is made from the slave
   Serial.begin(400000); // 400k full sppeed baud rate
-
-  // -----INSTANTIATE VARIABLES -----------
-  struct Data sensor_data; //instantiate struct to hold data
+  
 
   // ---- SETUP DEVICES ----
   analogWrite(bp_pump_pin, blood_pump_speed);
@@ -63,11 +63,11 @@ void setup()
   {
     if (on_switch_pin == HIGH) {
     // turn LED on:
-    on_state = true
+    on_state = true;
   } else 
   {
     // turn LED off:
-    on_state = false
+    on_state = false;
   }
   }
 }
@@ -76,10 +76,10 @@ void setup()
 void loop()
 {
   // feedback control for motor control
-  if(venous_pressure_value>ideal_bp_value+margin){
+  if(sensor_data.venous_pressure_value>ideal_bp_value+margin){
     blood_pump_speed--;  
   }
-  else if(blood_pump_speed<255 && venous_pressure_value>ideal_bp_value-margin ){
+  else if(blood_pump_speed<255 && sensor_data.venous_pressure_value>ideal_bp_value-margin ){
     blood_pump_speed++;
   }
 
@@ -88,6 +88,7 @@ void loop()
 
   
   delay(control_loop_delay); // need to change this value to change the step speed
+  Serial.print(sensor_data.venous_pressure_value);
 }
 
 
